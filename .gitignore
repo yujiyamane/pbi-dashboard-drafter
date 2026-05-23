@@ -1,0 +1,8 @@
+output/
+*.abf
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+localSettings.json
+editorSettings.json
