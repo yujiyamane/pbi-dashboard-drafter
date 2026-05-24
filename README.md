@@ -18,8 +18,22 @@
 
 <br>
 
-<!-- Replace with actual GIF -->
-![Demo](docs/assets/demo.gif)
+## 📺 Demo
+
+<div align="center">
+
+[![Dashboard Drafter Demo](https://img.youtube.com/vi/fUtpsnyUmpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=fUtpsnyUmpU)
+
+*▶ Click to watch the demo on YouTube*
+
+</div>
+
+<details>
+<summary>📸 Demo GIF (short version)</summary>
+
+![Demo GIF](docs/assets/demo.gif)
+
+</details>
 
 *One config. One command. One dashboard.*
 
