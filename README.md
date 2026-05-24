@@ -18,24 +18,21 @@
 
 <br>
 
-## 📺 Demo
-
-<div align="center">
-
-[![Dashboard Drafter Demo](https://img.youtube.com/vi/fUtpsnyUmpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=fUtpsnyUmpU)
-
-*▶ Click to watch the demo on YouTube*
-
-</div>
-
-<details>
-<summary>📸 Demo GIF (short version)</summary>
+## 🎬 Quick Demo
 
 ![Demo GIF](docs/assets/demo.gif)
 
-</details>
-
 *One config. One command. One dashboard.*
+
+## 📺 How It Works (Video Walkthrough)
+
+<div align="center">
+
+[![Dashboard Drafter — How It Works](https://img.youtube.com/vi/fUtpsnyUmpU/maxresdefault.jpg)](https://www.youtube.com/watch?v=fUtpsnyUmpU)
+
+*▶ Click to watch on YouTube*
+
+</div>
 
 </div>
 
