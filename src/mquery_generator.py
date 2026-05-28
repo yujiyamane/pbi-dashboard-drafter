@@ -25,7 +25,7 @@ def _build_csv_type_map(config):
             type_map[slot["field"]] = "Int64.Type"
     for slot in config.get("cnt", []):
         if slot:
-            type_map[slot["fields"][0]] = "Int64.Type"
+            type_map[slot["fields"][0]] = "type text"
     for slot in config.get("avg", []):
         if slot:
             type_map[slot["field"]] = "type number"

@@ -191,8 +191,11 @@ class TestCSVMQueryRenameFirst:
     def test_no_sum_slot_name_in_mquery(self, cfg_csv):
         assert '{"SUM_Measure_1"' not in generate_mquery(cfg_csv)
 
-    def test_cnt_business_name_typed_as_int64(self, cfg_csv):
-        assert '{"Record ID", Int64.Type}' in generate_mquery(cfg_csv)
+    def test_cnt_business_name_typed_as_text(self, cfg_csv):
+        assert '{"Record ID", type text}' in generate_mquery(cfg_csv)
+
+    def test_cnt_business_name_not_typed_as_int64(self, cfg_csv):
+        assert '{"Record ID", Int64.Type}' not in generate_mquery(cfg_csv)
 
     def test_no_cnt_slot_name_in_mquery(self, cfg_csv):
         assert '{"CNT_Measure_1"' not in generate_mquery(cfg_csv)
@@ -261,5 +264,5 @@ class TestCSVMQueryCNTRename:
     def test_cnt_csv_col_in_rename_step(self, cfg_cnt):
         assert '{"transaction_id", "Transaction Count"}' in generate_mquery(cfg_cnt)
 
-    def test_transaction_count_typed_as_int64(self, cfg_cnt):
-        assert '{"Transaction Count", Int64.Type}' in generate_mquery(cfg_cnt)
+    def test_transaction_count_typed_as_text(self, cfg_cnt):
+        assert '{"Transaction Count", type text}' in generate_mquery(cfg_cnt)
