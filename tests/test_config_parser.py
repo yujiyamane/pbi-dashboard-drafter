@@ -364,3 +364,34 @@ class TestExcelConfig:
 
     def test_other_single_field(self, hr_excel):
         assert hr_excel["other"] == ["Notes"]
+
+
+SQL_SIMPLE_CNT_CSV = r"""/*FACTORY
+TITLE: Simple CNT
+THEME(1:nsw-blue): 1
+DB(1:Oracle 2:PostgreSQL 3:Snowflake 4:CSV 5:Excel): 4
+SOURCE: C:\data\test.csv
+
+1.CNT(max5): ①transaction_id AS "Transaction Count" ②③④⑤
+2.SUM(max10): ①amount AS "Amount"($) ②③④⑤⑥⑦⑧⑨⑩
+3.AVG(max5): ①②③④⑤
+4.DATE: txn_date AS "Transaction Date"
+5.KEY(max10): ①category AS "Category" ②③④⑤⑥⑦⑧⑨⑩
+6.OTHER: notes
+*/
+"""
+
+
+class TestCSVConfigSingleCNTAlias:
+    @pytest.fixture
+    def cfg(self):
+        return parse_config(SQL_SIMPLE_CNT_CSV)
+
+    def test_cnt_slot_fields(self, cfg):
+        assert cfg["cnt"][0]["fields"] == ["Transaction Count"]
+
+    def test_cnt_slot_source_columns(self, cfg):
+        assert cfg["cnt"][0]["source_columns"] == ["transaction_id"]
+
+    def test_field_map_includes_cnt_rename(self, cfg):
+        assert cfg["field_map"]["transaction_id"] == "Transaction Count"

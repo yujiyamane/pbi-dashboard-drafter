@@ -103,13 +103,13 @@ class TestCSVMQuery:
         assert '{"Staff_Name", "Staff Name"}' in generate_mquery(cfg_csv)
 
     def test_no_rename_entry_for_headcount(self, cfg_csv):
-        assert '{"Headcount"' not in generate_mquery(cfg_csv)
+        assert '{"Headcount", "' not in generate_mquery(cfg_csv)
 
     def test_no_rename_entry_for_notes(self, cfg_csv):
-        assert '{"Notes"' not in generate_mquery(cfg_csv)
+        assert '{"Notes", "' not in generate_mquery(cfg_csv)
 
     def test_no_rename_entry_for_department(self, cfg_csv):
-        assert '{"Department"' not in generate_mquery(cfg_csv)
+        assert '{"Department", "' not in generate_mquery(cfg_csv)
 
 
 class TestExcelMQuery:
@@ -138,31 +138,10 @@ class TestCSVMQueryTypeConversion:
     def test_has_changed_type_step(self, cfg_csv):
         assert "Table.TransformColumnTypes" in generate_mquery(cfg_csv)
 
-    def test_datekey_converted_to_date(self, cfg_csv):
-        assert '{"DateKey", type date}' in generate_mquery(cfg_csv)
-
-    def test_sum_measure_1_converted_to_int64(self, cfg_csv):
-        assert '{"SUM_Measure_1", Int64.Type}' in generate_mquery(cfg_csv)
-
-    def test_cnt_measure_1_converted_to_int64(self, cfg_csv):
-        assert '{"CNT_Measure_1", Int64.Type}' in generate_mquery(cfg_csv)
-
-    def test_avg_measure_1_converted_to_number(self, cfg_csv):
-        assert '{"AVG_Measure_1", type number}' in generate_mquery(cfg_csv)
-
-    def test_changed_type_uses_promoted_headers(self, cfg_csv):
-        assert 'Table.TransformColumnTypes(#"Promoted Headers"' in generate_mquery(cfg_csv)
-
-    def test_rename_uses_changed_type_as_input(self, cfg_csv):
-        assert 'Table.RenameColumns(#"Changed Type"' in generate_mquery(cfg_csv)
-
 
 class TestExcelMQueryTypeConversion:
     def test_has_changed_type_step(self, cfg_excel):
         assert "Table.TransformColumnTypes" in generate_mquery(cfg_excel)
-
-    def test_datekey_converted_to_date(self, cfg_excel):
-        assert '{"DateKey", type date}' in generate_mquery(cfg_excel)
 
     def test_changed_type_uses_promoted_headers(self, cfg_excel):
         assert 'Table.TransformColumnTypes(#"Promoted Headers"' in generate_mquery(cfg_excel)
@@ -172,29 +151,6 @@ class TestSQLNotImplemented:
     def test_oracle_raises_not_implemented(self, cfg_oracle):
         with pytest.raises(NotImplementedError):
             generate_mquery(cfg_oracle)
-
-
-# Factory-mode config: field_map uses template slot names, unused_slots set explicitly
-@pytest.fixture
-def cfg_factory_csv():
-    return {
-        "db": 4,
-        "source": r"C:\data\test.csv",
-        "field_map": {
-            "SUM_Measure_1": "Total Budget",
-            "CNT_Measure_1": "Record Count",
-            "AVG_Measure_1": "Avg Rating",
-            "Key_Dim_1": "Department",
-            "DateKey": "Date Reported",
-        },
-        "unused_slots": (
-            [f"SUM_Measure_{i}" for i in range(2, 11)] +
-            [f"CNT_Measure_{i}" for i in range(2, 6)] +
-            [f"AVG_Measure_{i}" for i in range(2, 6)] +
-            [f"Key_Dim_{i}" for i in range(2, 11)] +
-            [f"Other_Field_{i}" for i in range(1, 11)]
-        ),
-    }
 
 
 class TestRemoveStep:
@@ -221,22 +177,89 @@ class TestRemoveStep:
         assert '"Key_Dim_3"' in step
 
 
-class TestCSVMQueryRemoveStep:
-    def test_remove_step_present(self, cfg_factory_csv):
-        assert "Table.RemoveColumns" in generate_mquery(cfg_factory_csv)
-
-    def test_unused_slot_in_remove_step(self, cfg_factory_csv):
-        assert '"SUM_Measure_2"' in generate_mquery(cfg_factory_csv)
-
-    def test_active_slot_in_rename_not_removed(self, cfg_factory_csv):
-        mq = generate_mquery(cfg_factory_csv)
-        assert '"SUM_Measure_1", "Total Budget"' in mq
-
-    def test_remove_uses_changed_type_as_input(self, cfg_factory_csv):
-        assert 'Table.RemoveColumns(#"Changed Type"' in generate_mquery(cfg_factory_csv)
-
-    def test_rename_uses_removed_columns_as_input(self, cfg_factory_csv):
-        assert 'Table.RenameColumns(#"Removed Columns"' in generate_mquery(cfg_factory_csv)
-
-    def test_no_remove_step_without_unused_slots(self, cfg_csv):
+class TestCSVMQueryNoRemoveStep:
+    def test_no_remove_step_in_csv_mquery(self, cfg_csv):
         assert "Table.RemoveColumns" not in generate_mquery(cfg_csv)
+
+
+class TestCSVMQueryRenameFirst:
+    """CSV path: rename CSV col names → business names first, type-cast by business name after."""
+
+    def test_sum_business_name_typed_as_int64(self, cfg_csv):
+        assert '{"Total Budget", Int64.Type}' in generate_mquery(cfg_csv)
+
+    def test_no_sum_slot_name_in_mquery(self, cfg_csv):
+        assert '{"SUM_Measure_1"' not in generate_mquery(cfg_csv)
+
+    def test_cnt_business_name_typed_as_int64(self, cfg_csv):
+        assert '{"Record ID", Int64.Type}' in generate_mquery(cfg_csv)
+
+    def test_no_cnt_slot_name_in_mquery(self, cfg_csv):
+        assert '{"CNT_Measure_1"' not in generate_mquery(cfg_csv)
+
+    def test_avg_business_name_typed_as_number(self, cfg_csv):
+        assert '{"Avg Rating", type number}' in generate_mquery(cfg_csv)
+
+    def test_no_avg_slot_name_in_mquery(self, cfg_csv):
+        assert '{"AVG_Measure_1"' not in generate_mquery(cfg_csv)
+
+    def test_date_business_name_typed_as_date(self, cfg_csv):
+        assert '{"Date Reported", type date}' in generate_mquery(cfg_csv)
+
+    def test_no_datekey_in_mquery(self, cfg_csv):
+        assert '{"DateKey"' not in generate_mquery(cfg_csv)
+
+    def test_rename_step_before_type_step(self, cfg_csv):
+        mq = generate_mquery(cfg_csv)
+        assert mq.index("Table.RenameColumns") < mq.index("Table.TransformColumnTypes")
+
+    def test_type_step_uses_renamed_columns_as_input(self, cfg_csv):
+        assert 'Table.TransformColumnTypes(#"Renamed Columns"' in generate_mquery(cfg_csv)
+
+    def test_rename_step_uses_promoted_headers_as_input(self, cfg_csv):
+        assert 'Table.RenameColumns(#"Promoted Headers"' in generate_mquery(cfg_csv)
+
+    def test_key_business_name_typed_as_text(self, cfg_csv):
+        assert '{"Department", type text}' in generate_mquery(cfg_csv)
+
+    def test_other_business_name_typed_as_text(self, cfg_csv):
+        assert '{"Staff Name", type text}' in generate_mquery(cfg_csv)
+
+
+class TestExcelMQueryRenameFirst:
+    """Excel path: date column uses CSV name in type step (no alias in SQL_HR_EXCEL)."""
+
+    def test_date_csv_col_typed_as_date(self, cfg_excel):
+        assert '{"Report_Date", type date}' in generate_mquery(cfg_excel)
+
+    def test_no_datekey_in_excel_mquery(self, cfg_excel):
+        assert '{"DateKey"' not in generate_mquery(cfg_excel)
+
+
+SQL_SIMPLE_CNT_CSV = r"""/*FACTORY
+TITLE: Asset Dashboard
+THEME(1:nsw-blue): 1
+DB(1:Oracle 2:PostgreSQL 3:Snowflake 4:CSV 5:Excel): 4
+SOURCE: C:\data\test.csv
+
+1.CNT(max5): ①transaction_id AS "Transaction Count" ②③④⑤
+2.SUM(max10): ①amount AS "Amount"($#,0.00) ②③④⑤⑥⑦⑧⑨⑩
+3.AVG(max5): ①②③④⑤
+4.DATE: txn_date AS "Transaction Date"
+5.KEY(max10): ①category AS "Category" ②③④⑤⑥⑦⑧⑨⑩
+6.OTHER: notes
+*/
+"""
+
+
+@pytest.fixture
+def cfg_cnt():
+    return parse_config(SQL_SIMPLE_CNT_CSV)
+
+
+class TestCSVMQueryCNTRename:
+    def test_cnt_csv_col_in_rename_step(self, cfg_cnt):
+        assert '{"transaction_id", "Transaction Count"}' in generate_mquery(cfg_cnt)
+
+    def test_transaction_count_typed_as_int64(self, cfg_cnt):
+        assert '{"Transaction Count", Int64.Type}' in generate_mquery(cfg_cnt)

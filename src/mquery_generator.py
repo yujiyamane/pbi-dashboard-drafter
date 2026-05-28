@@ -17,23 +17,36 @@ def generate_mquery(config):
     raise NotImplementedError(f"M Query generation not yet supported for DB type {db}")
 
 
-def _type_conversion_step(prev_step):
-    pairs = []
-    for i in range(1, 11):
-        pairs.append(f'{{"SUM_Measure_{i}", Int64.Type}}')
-    for i in range(1, 6):
-        pairs.append(f'{{"CNT_Measure_{i}", Int64.Type}}')
-    for i in range(1, 6):
-        pairs.append(f'{{"AVG_Measure_{i}", type number}}')
-    for i in range(1, 11):
-        pairs.append(f'{{"Key_Dim_{i}", type text}}')
-    for i in range(1, 11):
-        pairs.append(f'{{"Other_Field_{i}", type text}}')
-    pairs.append('{"DateKey", type date}')
-    conversions = ", ".join(pairs)
+def _build_csv_type_map(config):
+    """Build {business_name: M_Query_type_string} from config structure."""
+    type_map = {}
+    for slot in config.get("sum", []):
+        if slot:
+            type_map[slot["field"]] = "Int64.Type"
+    for slot in config.get("cnt", []):
+        if slot:
+            type_map[slot["fields"][0]] = "Int64.Type"
+    for slot in config.get("avg", []):
+        if slot:
+            type_map[slot["field"]] = "type number"
+    date = config.get("date")
+    if date:
+        type_map[date] = "type date"
+    for slot in config.get("key", []):
+        if slot:
+            type_map[slot["field"]] = "type text"
+    for field in config.get("other", []):
+        type_map[field] = "type text"
+    return type_map
+
+
+def _active_type_step(prev_step, type_map):
+    if not type_map:
+        return prev_step, None
+    pairs = ", ".join(f'{{"{col}", {typ}}}' for col, typ in type_map.items())
     step = (
         f'    #"Changed Type" = Table.TransformColumnTypes({prev_step}, '
-        f'{{{conversions}}})'
+        f'{{{pairs}}})'
     )
     return '#"Changed Type"', step
 
@@ -66,7 +79,6 @@ def _rename_step(prev_step, field_map):
 def _csv_mquery(config):
     path = config["source"]
     field_map = config.get("field_map", {})
-    unused_slots = config.get("unused_slots", [])
 
     source_expr = (
         f'    Source = Csv.Document(File.Contents("{path}"), '
@@ -75,15 +87,15 @@ def _csv_mquery(config):
     promote_expr = (
         '    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true])'
     )
-    _, changed_type_expr = _type_conversion_step('#"Promoted Headers"')
-    remove_final, remove_expr = _remove_step('#"Changed Type"', unused_slots)
-    final_step, rename_expr = _rename_step(remove_final, field_map)
+    rename_final, rename_expr = _rename_step('#"Promoted Headers"', field_map)
+    type_map = _build_csv_type_map(config)
+    final_step, type_expr = _active_type_step(rename_final, type_map)
 
-    steps = [source_expr, promote_expr, changed_type_expr]
-    if remove_expr:
-        steps.append(remove_expr)
+    steps = [source_expr, promote_expr]
     if rename_expr:
         steps.append(rename_expr)
+    if type_expr:
+        steps.append(type_expr)
 
     return "let\n" + ",\n".join(steps) + "\nin\n    " + final_step
 
@@ -91,7 +103,6 @@ def _csv_mquery(config):
 def _excel_mquery(config):
     path = config["source"]
     field_map = config.get("field_map", {})
-    unused_slots = config.get("unused_slots", [])
 
     source_expr = (
         f'    Source = Excel.Workbook(File.Contents("{path}"), null, true)'
@@ -100,14 +111,14 @@ def _excel_mquery(config):
     promote_expr = (
         '    #"Promoted Headers" = Table.PromoteHeaders(FirstSheet, [PromoteAllScalars=true])'
     )
-    _, changed_type_expr = _type_conversion_step('#"Promoted Headers"')
-    remove_final, remove_expr = _remove_step('#"Changed Type"', unused_slots)
-    final_step, rename_expr = _rename_step(remove_final, field_map)
+    rename_final, rename_expr = _rename_step('#"Promoted Headers"', field_map)
+    type_map = _build_csv_type_map(config)
+    final_step, type_expr = _active_type_step(rename_final, type_map)
 
-    steps = [source_expr, sheet_expr, promote_expr, changed_type_expr]
-    if remove_expr:
-        steps.append(remove_expr)
+    steps = [source_expr, sheet_expr, promote_expr]
     if rename_expr:
         steps.append(rename_expr)
+    if type_expr:
+        steps.append(type_expr)
 
     return "let\n" + ",\n".join(steps) + "\nin\n    " + final_step

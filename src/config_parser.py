@@ -128,6 +128,9 @@ def parse_config(sql_text):
         other, other_source_map = [], {}
 
     field_map = {}
+    for slot in cnt:
+        if slot and not slot.get("composite") and "source_columns" in slot:
+            field_map[slot["source_columns"][0]] = slot["fields"][0]
     for section in (sum_, avg, key):
         for slot in section:
             if slot and "source_column" in slot:

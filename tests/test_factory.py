@@ -151,12 +151,12 @@ THEME(1:nsw-blue): 1
 DB(1:Oracle 2:PostgreSQL 3:Snowflake 4:CSV 5:Excel): 4
 SOURCE: C:\data\finance_dummy_data.csv
 
-1.CNT(max5): ①"Invoice Count" ②"Client Count" ③④⑤
-2.SUM(max10): ①"Total Revenue"($) ②"Total Cost"($) ③"Total Profit"($) ④"Total Tax"($) ⑤⑥⑦⑧⑨⑩
-3.AVG(max5): ①"Avg Margin"(%) ②"Avg Days to Pay"(#.0) ③④⑤
-4.DATE: DateKey AS "Date Invoiced"
-5.KEY(max10): ①"Business Unit" ②Quarter ③Region ④"Account Type" ⑤⑥⑦⑧⑨⑩
-6.OTHER: "Client Name", "Invoice Ref", Notes
+1.CNT(max5): ①invoice_id AS "Invoice Count" ②client_id AS "Client Count" ③④⑤
+2.SUM(max10): ①revenue AS "Total Revenue"($) ②cost AS "Total Cost"($) ③profit AS "Total Profit"($) ④tax AS "Total Tax"($) ⑤⑥⑦⑧⑨⑩
+3.AVG(max5): ①margin AS "Avg Margin"(%) ②days_to_pay AS "Avg Days to Pay"(#.0) ③④⑤
+4.DATE: invoice_date AS "Date Invoiced"
+5.KEY(max10): ①business_unit AS "Business Unit" ②region AS "Region" ③account_type AS "Account Type" ④payment_method AS "Payment Method" ⑤⑥⑦⑧⑨⑩
+6.OTHER: client_name AS "Client Name", invoice_ref AS "Invoice Ref", notes AS "Notes"
 */
 """
 
@@ -472,35 +472,11 @@ class TestRunFactory:
         assert '"HR_Dashboard"' in platform
         assert '"template"' not in platform
 
-    def test_fact_tmdl_mquery_has_table_remove_columns(self, tmp_path, cfg):
-        run_factory(TEMPLATE_DIR, tmp_path, cfg)
-        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
-                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
-        assert "Table.RemoveColumns" in fact
-
-    def test_fact_tmdl_mquery_removes_unused_sum_slot(self, tmp_path, cfg):
-        run_factory(TEMPLATE_DIR, tmp_path, cfg)
-        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
-                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
-        assert '"SUM_Measure_2"' in fact
-
-    def test_fact_tmdl_mquery_rename_uses_removed_columns(self, tmp_path, cfg):
-        run_factory(TEMPLATE_DIR, tmp_path, cfg)
-        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
-                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
-        assert 'Table.RenameColumns(#"Removed Columns"' in fact
-
     def test_fact_tmdl_mquery_has_table_rename_columns(self, tmp_path, cfg):
         run_factory(TEMPLATE_DIR, tmp_path, cfg)
         fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
                 / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
         assert "Table.RenameColumns" in fact
-
-    def test_fact_tmdl_mquery_renames_sum_measure_1(self, tmp_path, cfg):
-        run_factory(TEMPLATE_DIR, tmp_path, cfg)
-        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
-                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
-        assert '"SUM_Measure_1", "Total Budget"' in fact
 
     def test_fact_tmdl_source_column_updated_to_business_name(self, tmp_path, cfg):
         run_factory(TEMPLATE_DIR, tmp_path, cfg)
@@ -589,3 +565,25 @@ class TestRunFactory:
                 / "definition" / "tables" / "Select Measure.tmdl").read_text(encoding="utf-8")
         assert '"SUM_Measure_2"' not in tmdl
         assert "NAMEOF('Fact'[DAX_SUM_Measure_2])" not in tmdl
+
+    def test_fact_tmdl_mquery_renames_csv_col_not_slot(self, tmp_path, cfg):
+        run_factory(TEMPLATE_DIR, tmp_path, cfg)
+        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
+                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
+        assert '"Budget", "Total Budget"' in fact
+        assert '"SUM_Measure_1", "Total Budget"' not in fact
+
+    def test_fact_tmdl_mquery_rename_uses_promoted_headers(self, tmp_path, cfg):
+        run_factory(TEMPLATE_DIR, tmp_path, cfg)
+        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
+                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
+        assert 'Table.RenameColumns(#"Promoted Headers"' in fact
+
+    def test_fact_tmdl_mquery_types_by_business_name(self, tmp_path, cfg):
+        run_factory(TEMPLATE_DIR, tmp_path, cfg)
+        fact = (tmp_path / "HR_Dashboard" / "HR_Dashboard.SemanticModel"
+                / "definition" / "tables" / "Fact.tmdl").read_text(encoding="utf-8")
+        assert '{"Total Budget", Int64.Type}' in fact
+        assert '{"Date Reported", type date}' in fact
+        assert '{"SUM_Measure_1", Int64.Type}' not in fact
+        assert '{"DateKey", type date}' not in fact

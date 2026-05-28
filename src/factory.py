@@ -142,9 +142,12 @@ def run_factory(template_dir, output_dir, config: dict) -> Path:
     fact_tmdl = semantic_dir / "definition" / "tables" / "Fact.tmdl"
 
     rename_map = _build_rename_map(config)
-    unused_slots = [s for s in _ALL_SLOTS if s not in rename_map]
-    mquery_field_map = {k: v for k, v in rename_map.items() if not k.startswith("DAX_")}
-    mquery = generate_mquery({**config, "field_map": mquery_field_map, "unused_slots": unused_slots})
+    if config.get("db", 0) in (4, 5):
+        mquery = generate_mquery(config)
+    else:
+        unused_slots = [s for s in _ALL_SLOTS if s not in rename_map]
+        mquery_field_map = {k: v for k, v in rename_map.items() if not k.startswith("DAX_")}
+        mquery = generate_mquery({**config, "field_map": mquery_field_map, "unused_slots": unused_slots})
     text = fact_tmdl.read_text(encoding="utf-8")
     text = _write_partition_source(text, mquery)
     text = _update_source_columns(text, rename_map)
