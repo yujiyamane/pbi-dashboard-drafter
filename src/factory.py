@@ -1,5 +1,7 @@
+import os
 import re
 import shutil
+import time
 from pathlib import Path
 
 from .config_parser import parse_config
@@ -8,6 +10,17 @@ from .visibility_pipeline import get_hidden_columns, apply_visibility, remove_hi
 from .format_pipeline import get_format_updates, apply_formats
 from .rename_pipeline import rename_pipeline
 from .sort_pipeline import run_sort_pipeline
+
+
+def _rename_with_retry(src, dst, attempts=10, delay=0.3):
+    for i in range(attempts):
+        try:
+            os.rename(src, dst)
+            return
+        except PermissionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(delay)
 
 
 def _sanitize_name(title: str) -> str:
@@ -109,9 +122,9 @@ def run_factory(template_dir, output_dir, config: dict) -> Path:
 
     for item in list(out_root.iterdir()):
         if item.name == "Template.Report":
-            item.rename(out_root / f"{name}.Report")
+            _rename_with_retry(item, out_root / f"{name}.Report")
         elif item.name == "Template.SemanticModel":
-            item.rename(out_root / f"{name}.SemanticModel")
+            _rename_with_retry(item, out_root / f"{name}.SemanticModel")
         elif item.name == "Template.pbip":
             new_pbip = out_root / f"{name}.pbip"
             item.rename(new_pbip)
